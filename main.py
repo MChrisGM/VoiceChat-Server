@@ -3,12 +3,9 @@ import pyaudio
 import socket
 import threading
 import time
+import json
 from pyngrok import conf, ngrok
-
-host = socket.gethostbyname(socket.gethostname())
-port = 8080
-
-NGROK_TOKEN = os.environ['NGROK_TOKEN']
+from dotenv import load_dotenv
 
 class VoiceServer:
   def __init__(self,host=None, port=None, frame_chunk=4096):
@@ -38,12 +35,13 @@ class VoiceServer:
   def server_info(self):
     starttime = time.time()
     while self.running:
-      print({
+      print(json.dumps({
         "Running":self.running,
         "Server IP":self.host,
         "Server Port":self.port,
         "Connections":self.connections
-      })
+      }, indent=4)
+      )
       time.sleep(60.0 - ((time.time() - starttime) % 60.0))
       
 
@@ -65,19 +63,31 @@ class VoiceServer:
   def connection(self, connection, address):
     print('Client connected!')
     print(connection, address)
-    self.connections[address] = {'Connection':connection,'Address':address}
+    self.connections[address[0]] = {'Connection':str(connection),'Address':str(address)}
     while self.running:
-        data = connection.recv(self.frame_chunk)
-        connection.send(data)
+        try:
+          data = connection.recv(self.frame_chunk)
+          connection.send(data)
+        except ConnectionResetError:
+          print('Connection was reset')
+        except ConnectionError:
+          print('Error with connection')
 
 
 if __name__=='__main__':
   print('Starting Server...')
 
-  ngrok.set_auth_token(NGROK_TOKEN)
-  conf.get_default().region = "eu"
-  ngrok_tunnel = ngrok.connect(port,'tcp')
-  print(ngrok_tunnel)
+  load_dotenv()
+
+  host = socket.gethostbyname(socket.gethostname())
+  port = 8080
+
+  NGROK_TOKEN = os.environ['NGROK_TOKEN']
+
+  # ngrok.set_auth_token(NGROK_TOKEN)
+  # conf.get_default().region = "eu"
+  # ngrok_tunnel = ngrok.connect(port,'tcp')
+  # print(ngrok_tunnel)
   
   server = VoiceServer(host = host, port = port)
   server.start_server()

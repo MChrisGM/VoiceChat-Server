@@ -5,7 +5,7 @@ import json
 import numpy
 import time
 
-connection_wait_time = 5
+
 
 class VoiceClient:
     def __init__(self, ip=None, port=None, audio_format=pyaudio.paInt16, channels=1, rate=44100, frame_chunk=4096, audioIn=pyaudio.PyAudio(), audioOut=pyaudio.PyAudio(), input_device_id = None, output_device_id = None):
@@ -27,6 +27,7 @@ class VoiceClient:
         self.__streamOut= None
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.connection_wait_time = 5
 
     def start_stream(self):
         if self.running:
@@ -39,14 +40,14 @@ class VoiceClient:
 
     def streaming(self):
         counter = 0
-        while counter < 60*connection_wait_time:
+        while counter < 60*self.connection_wait_time:
             try:
                 self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.socket.connect((self.server_ip, self.port))
                 break
             except socket.error as error:
                 print("Connection Failed **BECAUSE:** "+str(error))
-                print("Attempt "+str(counter)+" of "+str(60*connection_wait_time))
+                print("Attempt "+str(counter)+" of "+str(60*self.connection_wait_time))
                 self.connected = False
                 counter += 1
                 time.sleep(1)        
@@ -103,15 +104,19 @@ def filter_io(io, properties = ['index','name']):
 
 if __name__=='__main__':
 
-    ip = '2.tcp.eu.ngrok.io'
-    port = 13058
+    ip = '192.168.56.1'
+    port = 8080
 
     print('Starting client')
 
     filtered_io = filter_io(get_io(), ['index','name'])
-    print(json.dumps(filtered_io, indent=4))
-
+    # print(json.dumps(filtered_io, indent=4))
+    for i in filtered_io['Input']:
+        print(filtered_io['Input'][i]['index'],filtered_io['Input'][i]['name'])
     input_id = int(input('Select Input Device ID: '))
+    
+    for i in filtered_io['Output']:
+        print(filtered_io['Output'][i]['index'],filtered_io['Output'][i]['name'])
     output_id = int(input('Select Output Device ID: '))
 
     client = VoiceClient(ip = ip, port=port, input_device_id=input_id, output_device_id=output_id)
